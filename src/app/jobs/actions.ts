@@ -5,8 +5,16 @@ import { aiService } from '@/lib/ai';
 import type { Job, JobInput, JobStructured, JobQuestion, JobStructuredQuestion } from '@/types/database';
 import { revalidatePath } from 'next/cache';
 import { siteJobs } from '@/lib/data/siteJobs';
+import { mockJobs, mockJobQuestions } from '@/lib/data/mockJobs';
+
+// Use mock data for demo
+const USE_MOCK_DATA = true;
 
 export async function getJobs(): Promise<Job[]> {
+  if (USE_MOCK_DATA) {
+    return mockJobs;
+  }
+
   const user = await getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -22,6 +30,10 @@ export async function getJobs(): Promise<Job[]> {
 }
 
 export async function getJob(id: string): Promise<Job | null> {
+  if (USE_MOCK_DATA) {
+    return mockJobs.find(j => j.id === id) || null;
+  }
+
   const user = await getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -41,6 +53,10 @@ export async function getJob(id: string): Promise<Job | null> {
 }
 
 export async function getJobQuestions(jobId: string): Promise<JobQuestion[]> {
+  if (USE_MOCK_DATA) {
+    return mockJobQuestions.filter(q => q.job_id === jobId);
+  }
+
   const user = await getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -61,15 +77,13 @@ export async function parseJobFromUrl(
   url: string
 ): Promise<{ success: boolean; rawText?: string; title?: string; company?: string; error?: string }> {
   try {
-    // Validate URL
     const urlObj = new URL(url);
     if (!['http:', 'https:'].includes(urlObj.protocol)) {
       return { success: false, error: '유효하지 않은 URL입니다' };
     }
 
-    // Attempt to fetch the page (best effort)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(url, {
       headers: {
@@ -90,7 +104,6 @@ export async function parseJobFromUrl(
 
     const html = await response.text();
 
-    // Basic text extraction (remove scripts, styles, tags)
     let text = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -102,7 +115,6 @@ export async function parseJobFromUrl(
       .replace(/\n\s*\n/g, '\n\n')
       .trim();
 
-    // If too short, parsing likely failed
     if (text.length < 100) {
       return {
         success: false,
@@ -110,12 +122,10 @@ export async function parseJobFromUrl(
       };
     }
 
-    // Trim to reasonable length
     if (text.length > 10000) {
       text = text.slice(0, 10000);
     }
 
-    // Try to extract title from meta or title tag
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : undefined;
 
@@ -147,11 +157,14 @@ export async function structureJobAction(rawText: string): Promise<JobStructured
 export async function createJob(
   input: JobInput
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true, id: 'mock-job-' + Date.now() };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
-    // Structure the job
     const structured = await structureJobAction(input.raw_text);
 
     const supabase = createServerSupabaseClient();
@@ -171,7 +184,6 @@ export async function createJob(
 
     if (error) throw new Error(error.message);
 
-    // If there are questions in structured, create job_questions
     if (structured.questions && structured.questions.length > 0) {
       const questions = (structured.questions as JobStructuredQuestion[]).map((q, idx) => ({
         job_id: data.id,
@@ -217,13 +229,16 @@ export async function addJobQuestion(
   questionTitle: string,
   charLimit: number | null
 ): Promise<{ success: boolean; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
     const supabase = createServerSupabaseClient();
 
-    // Get current max order_idx
     const { data: existing } = await supabase
       .from('job_questions')
       .select('order_idx')
@@ -258,6 +273,10 @@ export async function addJobQuestion(
 export async function deleteJobQuestion(
   questionId: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
@@ -285,6 +304,10 @@ export async function deleteJobQuestion(
 export async function deleteJob(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 

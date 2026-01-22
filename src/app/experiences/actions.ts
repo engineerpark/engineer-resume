@@ -4,8 +4,16 @@ import { createServerSupabaseClient, getUser } from '@/lib/supabase/server';
 import { aiService } from '@/lib/ai';
 import type { Experience, ExperienceInput, StructuredExperience } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+import { mockExperiences } from '@/lib/data/mockExperiences';
+
+// Use mock data for demo
+const USE_MOCK_DATA = true;
 
 export async function getExperiences(): Promise<Experience[]> {
+  if (USE_MOCK_DATA) {
+    return mockExperiences;
+  }
+
   const user = await getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -21,6 +29,10 @@ export async function getExperiences(): Promise<Experience[]> {
 }
 
 export async function getExperience(id: string): Promise<Experience | null> {
+  if (USE_MOCK_DATA) {
+    return mockExperiences.find(e => e.id === id) || null;
+  }
+
   const user = await getUser();
   if (!user) throw new Error('Unauthorized');
 
@@ -59,11 +71,15 @@ export async function structureExperienceAction(
 export async function createExperience(
   input: ExperienceInput
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (USE_MOCK_DATA) {
+    // In mock mode, just return success (data won't persist)
+    return { success: true, id: 'mock-' + Date.now() };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
-    // Structure the experience using AI
     const structured = await structureExperienceAction(input);
 
     const supabase = createServerSupabaseClient();
@@ -103,13 +119,16 @@ export async function updateExperience(
   id: string,
   input: Partial<ExperienceInput>
 ): Promise<{ success: boolean; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
     const supabase = createServerSupabaseClient();
 
-    // Get existing experience
     const { data: existing } = await supabase
       .from('experiences')
       .select('*')
@@ -119,7 +138,6 @@ export async function updateExperience(
 
     if (!existing) return { success: false, error: 'Experience not found' };
 
-    // Merge and restructure if content changed
     const merged = {
       start_month: input.start_month ?? existing.start_month,
       end_month: input.end_month ?? existing.end_month,
@@ -130,7 +148,6 @@ export async function updateExperience(
       raw_notes: input.raw_notes ?? existing.raw_notes,
     };
 
-    // Re-structure if notes or key fields changed
     let structuredFields = {};
     if (
       input.raw_notes !== undefined ||
@@ -181,6 +198,10 @@ export async function updateExperience(
 export async function deleteExperience(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
