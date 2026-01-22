@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Navigation } from '@/components/Navigation';
+import { AppShell } from '@/components/layout';
 
 export const metadata: Metadata = {
   title: '공대 전화기 - 경력기술서 생성기',
@@ -14,11 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="bg-gray-50 min-h-screen">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+      <body className="bg-gray-50">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
