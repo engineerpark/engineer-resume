@@ -2,7 +2,7 @@
 
 import { createServerSupabaseClient, getUser } from '@/lib/supabase/server';
 import { aiService } from '@/lib/ai';
-import type { Job, JobInput, JobStructured, JobQuestion } from '@/types/database';
+import type { Job, JobInput, JobStructured, JobQuestion, JobStructuredQuestion } from '@/types/database';
 import { revalidatePath } from 'next/cache';
 import { siteJobs } from '@/lib/data/siteJobs';
 
@@ -173,7 +173,7 @@ export async function createJob(
 
     // If there are questions in structured, create job_questions
     if (structured.questions && structured.questions.length > 0) {
-      const questions = structured.questions.map((q, idx) => ({
+      const questions = (structured.questions as JobStructuredQuestion[]).map((q, idx) => ({
         job_id: data.id,
         user_id: user.id,
         question_title: q.title,
