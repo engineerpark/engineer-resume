@@ -1,6 +1,14 @@
 // AI Service Entry Point
-// Export the placeholder implementation for MVP
-// Switch to real implementation when ready
+// Uses LangChain/OpenAI when API key is available, otherwise falls back to placeholder
 
-export { placeholderAI as aiService } from './placeholder';
+import { langchainAI } from './langchain';
+import { placeholderAI } from './placeholder';
+import type { AIService } from './types';
+
+// Check if OpenAI API key is available
+const hasOpenAIKey = typeof process !== 'undefined' && !!process.env?.OPENAI_API_KEY;
+
+// Export the appropriate AI service
+export const aiService: AIService = hasOpenAIKey ? langchainAI : placeholderAI;
+
 export type { AIService } from './types';
