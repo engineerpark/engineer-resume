@@ -11,6 +11,11 @@ import type {
   QCResult,
 } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+import { mockJobs } from '@/lib/data/mockJobs';
+import { mockExperiences } from '@/lib/data/mockExperiences';
+
+// Use mock data for demo
+const USE_MOCK_DATA = true;
 
 // Generate career report
 export async function generateCareerReport(
@@ -21,36 +26,53 @@ export async function generateCareerReport(
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
-    const supabase = createServerSupabaseClient();
+    let job: Job | null = null;
+    let experiences: Experience[] = [];
 
-    // Get job
-    const { data: job } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', jobId)
-      .eq('user_id', user.id)
-      .single();
+    if (USE_MOCK_DATA) {
+      job = mockJobs.find(j => j.id === jobId) || null;
+      experiences = mockExperiences.filter(e => experienceIds.includes(e.id));
+    } else {
+      const supabase = createServerSupabaseClient();
+
+      // Get job
+      const { data: jobData } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+        .single();
+
+      job = jobData;
+
+      // Get experiences
+      const { data: expData } = await supabase
+        .from('experiences')
+        .select('*')
+        .in('id', experienceIds)
+        .eq('user_id', user.id);
+
+      experiences = expData || [];
+    }
 
     if (!job || !job.structured) {
       return { success: false, error: 'Job not found or not structured' };
     }
 
-    // Get experiences
-    const { data: experiences } = await supabase
-      .from('experiences')
-      .select('*')
-      .in('id', experienceIds)
-      .eq('user_id', user.id);
-
-    if (!experiences || experiences.length === 0) {
+    if (experiences.length === 0) {
       return { success: false, error: 'No experiences found' };
     }
 
     // Generate report
+    const lengthRules = job.structured.length_rules;
     const result = await aiService.generateCareerReport({
       jobStructured: job.structured,
       selectedExperiences: experiences,
-      lengthRule: job.structured.length_rules,
+      lengthRule: lengthRules ? {
+        minChars: lengthRules.min_chars,
+        maxChars: lengthRules.max_chars,
+        pageLimit: lengthRules.page_limit,
+      } : undefined,
     });
 
     return { success: true, result };
@@ -70,6 +92,10 @@ export async function saveDocument(
   contentMd: string,
   meta: Record<string, unknown>
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (USE_MOCK_DATA) {
+    return { success: true, id: 'mock-doc-' + Date.now() };
+  }
+
   const user = await getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
@@ -111,16 +137,24 @@ export async function generateCoverLetterAnswer(
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
-    const supabase = createServerSupabaseClient();
+    let experiences: Experience[] = [];
 
-    // Get experiences
-    const { data: experiences } = await supabase
-      .from('experiences')
-      .select('*')
-      .in('id', experienceIds)
-      .eq('user_id', user.id);
+    if (USE_MOCK_DATA) {
+      experiences = mockExperiences.filter(e => experienceIds.includes(e.id));
+    } else {
+      const supabase = createServerSupabaseClient();
 
-    if (!experiences || experiences.length === 0) {
+      // Get experiences
+      const { data: expData } = await supabase
+        .from('experiences')
+        .select('*')
+        .in('id', experienceIds)
+        .eq('user_id', user.id);
+
+      experiences = expData || [];
+    }
+
+    if (experiences.length === 0) {
       return { success: false, error: 'No experiences selected' };
     }
 
