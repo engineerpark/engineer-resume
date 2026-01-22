@@ -148,3 +148,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxx
 ## 라이선스
 
 Private - All rights reserved
+# Deployed 2026년  1월 22일 목요일 21시 28분 25초 KST
