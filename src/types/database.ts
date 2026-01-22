@@ -36,13 +36,18 @@ export interface Job {
   created_at: string;
 }
 
+export interface JobStructuredQuestion {
+  title: string;
+  char_limit?: number;
+}
+
 export interface JobStructured {
   requirements: {
     must: string[];
     preferred: string[];
   };
   responsibilities: string[];
-  questions?: JobQuestion[];
+  questions?: JobStructuredQuestion[];
   length_rules?: {
     min_chars?: number;
     max_chars?: number;
